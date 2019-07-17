@@ -1,35 +1,35 @@
 (function() {
 
-	var IS_FILE_PROTOCOL = (window.location.protocol === 'file:');
-	var DIRNAME = null;
+	let IS_FILE_PROTOCOL = (window.location.protocol === 'file:');
+	let DIRNAME = null;
 	if (IS_FILE_PROTOCOL) {
-		var port = window.location.port;
+		let port = window.location.port;
 		if (port.length > 0) {
 			port = ':' + port;
 		}
 		DIRNAME = window.location.protocol + '//' + window.location.hostname + port + window.location.pathname.substr(0, window.location.pathname.lastIndexOf('/'));
 
-		var bases = document.getElementsByTagName('base');
+		let bases = document.getElementsByTagName('base');
 		if (bases.length > 0) {
 			DIRNAME = DIRNAME + '/' + bases[0].getAttribute('href');
 		}
 	}
 
 
-	var LOADER_OPTS = (function() {
+	let LOADER_OPTS = (function() {
 		function parseQueryString() {
-			var str = window.location.search;
+			let str = window.location.search;
 			str = str.replace(/^\?/, '');
-			var pieces = str.split(/&/);
-			var result = {};
+			let pieces = str.split(/&/);
+			let result = {};
 			pieces.forEach(function(piece) {
-				var config = piece.split(/=/);
+				let config = piece.split(/=/);
 				result[config[0]] = config[1];
 			});
 			return result;
 		}
-		var overwrites = parseQueryString();
-		var result = {};
+		let overwrites = parseQueryString();
+		let result = {};
 		result['editor'] = overwrites['editor'] || 'npm/dev';
 		METADATA.PLUGINS.map(function(plugin) {
 			result[plugin.name] = overwrites[plugin.name] || 'npm/dev';
@@ -37,7 +37,7 @@
 		return result;
 	})();
 	function toHREF(search) {
-		var port = window.location.port;
+		let port = window.location.port;
 		if (port.length > 0) {
 			port = ':' + port;
 		}
@@ -55,33 +55,35 @@
 	Component.prototype.isRelease = function() {
 		return /release/.test(this.selectedPath);
 	};
-	Component.prototype.getResolvedPath = function() {
-		var resolvedPath = this.paths[this.selectedPath];
+	Component.prototype.getResolvedPath = function(PATH_PREFIX) {
+		let resolvedPath = this.paths[this.selectedPath];
 		if (this.selectedPath === 'npm/dev' || this.selectedPath === 'npm/min' || this.isRelease()) {
 			if (IS_FILE_PROTOCOL) {
 				resolvedPath = DIRNAME + '/../' + resolvedPath;
 			} else {
-				resolvedPath = '/monaco-editor/' + resolvedPath;
+				resolvedPath = PATH_PREFIX + '/monaco-editor/' + resolvedPath;
 			}
 		} else {
 			if (IS_FILE_PROTOCOL) {
 				resolvedPath = DIRNAME + '/../..' + resolvedPath;
+			} else {
+				resolvedPath = PATH_PREFIX + resolvedPath;
 			}
 		}
 		return resolvedPath;
 	};
-	Component.prototype.generateLoaderConfig = function(dest) {
-		dest[this.modulePrefix] = this.getResolvedPath();
+	Component.prototype.generateLoaderConfig = function(dest, PATH_PREFIX) {
+		dest[this.modulePrefix] = this.getResolvedPath(PATH_PREFIX);
 	};
 	Component.prototype.generateUrlForPath = function(pathName) {
-		var NEW_LOADER_OPTS = {};
+		let NEW_LOADER_OPTS = {};
 		Object.keys(LOADER_OPTS).forEach(function(key) {
 			NEW_LOADER_OPTS[key] = (LOADER_OPTS[key] === 'npm/dev' ? undefined : LOADER_OPTS[key]);
 		});
 		NEW_LOADER_OPTS[this.name] = (pathName === 'npm/dev' ? undefined : pathName);
 
-		var search = Object.keys(NEW_LOADER_OPTS).map(function(key) {
-			var value = NEW_LOADER_OPTS[key];
+		let search = Object.keys(NEW_LOADER_OPTS).map(function(key) {
+			let value = NEW_LOADER_OPTS[key];
 			if (value) {
 				return key + '=' + value;
 			}
@@ -102,16 +104,16 @@
 	};
 
 
-	var RESOLVED_CORE = new Component('editor', 'vs', METADATA.CORE.paths);
-	self.RESOLVED_CORE_PATH = RESOLVED_CORE.getResolvedPath();
-	var RESOLVED_PLUGINS = METADATA.PLUGINS.map(function(plugin) {
+	let RESOLVED_CORE = new Component('editor', 'vs', METADATA.CORE.paths);
+	self.RESOLVED_CORE_PATH = RESOLVED_CORE.getResolvedPath('');
+	let RESOLVED_PLUGINS = METADATA.PLUGINS.map(function(plugin) {
 		return new Component(plugin.name, plugin.modulePrefix, plugin.paths, plugin.contrib);
 	});
 	METADATA = null;
 
 
 	function loadScript(path, callback) {
-		var script = document.createElement('script');
+		let script = document.createElement('script');
 		script.onload = callback;
 		script.async = true;
 		script.type = 'text/javascript';
@@ -121,12 +123,12 @@
 
 
 	(function() {
-		var allComponents = [RESOLVED_CORE];
+		let allComponents = [RESOLVED_CORE];
 		if (!RESOLVED_CORE.isRelease()) {
 			allComponents = allComponents.concat(RESOLVED_PLUGINS);
 		}
 
-		var div = document.createElement('div');
+		let div = document.createElement('div');
 		div.style.position = 'fixed';
 		div.style.top = 0;
 		div.style.right = 0;
@@ -138,9 +140,9 @@
 
 		document.body.appendChild(div);
 
-		var aElements = document.getElementsByTagName('a');
-		for (var i = 0; i < aElements.length; i++) {
-			var aElement = aElements[i];
+		let aElements = document.getElementsByTagName('a');
+		for (let i = 0; i < aElements.length; i++) {
+			let aElement = aElements[i];
 			if (aElement.className === 'loading-opts') {
 				aElement.href += window.location.search
 			}
@@ -151,20 +153,25 @@
 	self.loadEditor = function(callback, PATH_PREFIX) {
 		PATH_PREFIX = PATH_PREFIX || '';
 
-		loadScript(PATH_PREFIX + RESOLVED_CORE.getResolvedPath() + '/loader.js', function() {
-			var loaderPathsConfig = {};
+		loadScript(RESOLVED_CORE.getResolvedPath(PATH_PREFIX) + '/loader.js', function() {
+			let loaderPathsConfig = {};
 			if (!RESOLVED_CORE.isRelease()) {
 				RESOLVED_PLUGINS.forEach(function(plugin) {
-					plugin.generateLoaderConfig(loaderPathsConfig);
+					plugin.generateLoaderConfig(loaderPathsConfig, PATH_PREFIX);
 				});
 			}
-			RESOLVED_CORE.generateLoaderConfig(loaderPathsConfig);
+			RESOLVED_CORE.generateLoaderConfig(loaderPathsConfig, PATH_PREFIX);
 
 			console.log('LOADER CONFIG: ');
 			console.log(JSON.stringify(loaderPathsConfig, null, '\t'));
 
 			require.config({
-				paths: loaderPathsConfig
+				paths: loaderPathsConfig,
+				// 'vs/nls' : {
+				// 	availableLanguages: {
+				// 		'*': 'de'
+				// 	}
+				// }
 			});
 
 			require(['vs/editor/editor.main'], function() {
